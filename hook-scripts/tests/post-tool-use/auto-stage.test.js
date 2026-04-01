@@ -95,6 +95,28 @@ describe('Unit: stageFile()', () => {
     const result = stageFile(path.join(tempDir, 'nonexistent.txt'));
     assert.ok('success' in result);
   });
+
+  it('does not execute shell commands embedded in filenames', () => {
+    // A filename containing shell metacharacters must be treated as a literal
+    // path, not executed. With the old execSync(`git add "${filePath}"`), a
+    // name like: evil"; touch marker; echo "x  would break out of the quotes
+    // and run `touch marker` with cwd=tempDir.
+    const markerName = `injection-marker-${Date.now()}`;
+    const markerPath = path.join(tempDir, markerName);
+    // Use only characters valid in a Unix filename (no slashes).
+    // The injected command touches markerName relative to cwd (tempDir).
+    const maliciousName = `evil"; touch ${markerName}; echo "x.txt`;
+    const maliciousFile = path.join(tempDir, maliciousName);
+    fs.writeFileSync(maliciousFile, 'payload');
+
+    stageFile(maliciousFile);
+
+    assert.strictEqual(
+      fs.existsSync(markerPath),
+      false,
+      `Shell injection succeeded — marker file was created at ${markerPath}`
+    );
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

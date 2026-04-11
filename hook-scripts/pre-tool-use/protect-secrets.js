@@ -34,40 +34,42 @@ const ALLOWLIST = [
 // Sensitive file patterns for Read, Edit, Write tools
 const SENSITIVE_FILES = [
   // CRITICAL
-  { level: 'critical', id: 'env-file',           regex: /(?:^|\/)\.env(?:\.[^/]*)?$/,                    reason: '.env file contains secrets' },
-  { level: 'critical', id: 'envrc',              regex: /(?:^|\/)\.envrc$/,                              reason: '.envrc (direnv) contains secrets' },
-  { level: 'critical', id: 'ssh-private-key',    regex: /(?:^|\/)\.ssh\/id_[^/]+$/,                      reason: 'SSH private key' },
-  { level: 'critical', id: 'ssh-private-key-2',  regex: /(?:^|\/)(id_rsa|id_ed25519|id_ecdsa|id_dsa)$/,  reason: 'SSH private key' },
-  { level: 'critical', id: 'ssh-authorized',     regex: /(?:^|\/)\.ssh\/authorized_keys$/,               reason: 'SSH authorized_keys' },
-  { level: 'critical', id: 'aws-credentials',    regex: /(?:^|\/)\.aws\/credentials$/,                   reason: 'AWS credentials file' },
-  { level: 'critical', id: 'aws-config',         regex: /(?:^|\/)\.aws\/config$/,                        reason: 'AWS config may contain secrets' },
-  { level: 'critical', id: 'kube-config',        regex: /(?:^|\/)\.kube\/config$/,                       reason: 'Kubernetes config contains credentials' },
-  { level: 'critical', id: 'pem-key',            regex: /\.pem$/i,                                       reason: 'PEM key file' },
-  { level: 'critical', id: 'key-file',           regex: /\.key$/i,                                       reason: 'Key file' },
-  { level: 'critical', id: 'p12-key',            regex: /\.(p12|pfx)$/i,                                 reason: 'PKCS12 key file' },
+  // All path patterns use the `i` flag so that case-insensitive filesystems
+  // (macOS HFS+, Windows NTFS) cannot bypass protection via .ENV or .Env etc.
+  { level: 'critical', id: 'env-file',           regex: /(?:^|\/)\.env(?:\.[^/]*)?$/i,                    reason: '.env file contains secrets' },
+  { level: 'critical', id: 'envrc',              regex: /(?:^|\/)\.envrc$/i,                              reason: '.envrc (direnv) contains secrets' },
+  { level: 'critical', id: 'ssh-private-key',    regex: /(?:^|\/)\.ssh\/id_[^/]+$/i,                      reason: 'SSH private key' },
+  { level: 'critical', id: 'ssh-private-key-2',  regex: /(?:^|\/)(id_rsa|id_ed25519|id_ecdsa|id_dsa)$/i,  reason: 'SSH private key' },
+  { level: 'critical', id: 'ssh-authorized',     regex: /(?:^|\/)\.ssh\/authorized_keys$/i,               reason: 'SSH authorized_keys' },
+  { level: 'critical', id: 'aws-credentials',    regex: /(?:^|\/)\.aws\/credentials$/i,                   reason: 'AWS credentials file' },
+  { level: 'critical', id: 'aws-config',         regex: /(?:^|\/)\.aws\/config$/i,                        reason: 'AWS config may contain secrets' },
+  { level: 'critical', id: 'kube-config',        regex: /(?:^|\/)\.kube\/config$/i,                       reason: 'Kubernetes config contains credentials' },
+  { level: 'critical', id: 'pem-key',            regex: /\.pem$/i,                                        reason: 'PEM key file' },
+  { level: 'critical', id: 'key-file',           regex: /\.key$/i,                                        reason: 'Key file' },
+  { level: 'critical', id: 'p12-key',            regex: /\.(p12|pfx)$/i,                                  reason: 'PKCS12 key file' },
 
   // HIGH
-  { level: 'high', id: 'credentials-json',       regex: /(?:^|\/)credentials\.json$/i,                   reason: 'Credentials file' },
+  { level: 'high', id: 'credentials-json',       regex: /(?:^|\/)credentials\.json$/i,                    reason: 'Credentials file' },
   { level: 'high', id: 'secrets-file',           regex: /(?:^|\/)(secrets?|credentials?)\.(json|ya?ml|toml)$/i, reason: 'Secrets configuration file' },
-  { level: 'high', id: 'service-account',        regex: /service[_-]?account.*\.json$/i,                 reason: 'GCP service account key' },
+  { level: 'high', id: 'service-account',        regex: /service[_-]?account.*\.json$/i,                  reason: 'GCP service account key' },
   { level: 'high', id: 'gcloud-creds',           regex: /(?:^|\/)\.config\/gcloud\/.*(credentials|tokens)/i, reason: 'GCloud credentials' },
-  { level: 'high', id: 'azure-creds',            regex: /(?:^|\/)\.azure\/(credentials|accessTokens)/i,  reason: 'Azure credentials' },
-  { level: 'high', id: 'docker-config',          regex: /(?:^|\/)\.docker\/config\.json$/,               reason: 'Docker config may contain registry auth' },
-  { level: 'high', id: 'netrc',                  regex: /(?:^|\/)\.netrc$/,                              reason: '.netrc contains credentials' },
-  { level: 'high', id: 'npmrc',                  regex: /(?:^|\/)\.npmrc$/,                              reason: '.npmrc may contain auth tokens' },
-  { level: 'high', id: 'pypirc',                 regex: /(?:^|\/)\.pypirc$/,                             reason: '.pypirc contains PyPI credentials' },
-  { level: 'high', id: 'gem-creds',              regex: /(?:^|\/)\.gem\/credentials$/,                   reason: 'RubyGems credentials' },
-  { level: 'high', id: 'vault-token',            regex: /(?:^|\/)(\.vault-token|vault-token)$/,          reason: 'Vault token file' },
-  { level: 'high', id: 'keystore',               regex: /\.(keystore|jks)$/i,                            reason: 'Java keystore' },
-  { level: 'high', id: 'htpasswd',               regex: /(?:^|\/)\.?htpasswd$/,                          reason: 'htpasswd contains hashed passwords' },
-  { level: 'high', id: 'pgpass',                 regex: /(?:^|\/)\.pgpass$/,                             reason: 'PostgreSQL password file' },
-  { level: 'high', id: 'my-cnf',                 regex: /(?:^|\/)\.my\.cnf$/,                            reason: 'MySQL config may contain password' },
+  { level: 'high', id: 'azure-creds',            regex: /(?:^|\/)\.azure\/(credentials|accessTokens)/i,   reason: 'Azure credentials' },
+  { level: 'high', id: 'docker-config',          regex: /(?:^|\/)\.docker\/config\.json$/i,               reason: 'Docker config may contain registry auth' },
+  { level: 'high', id: 'netrc',                  regex: /(?:^|\/)\.netrc$/i,                              reason: '.netrc contains credentials' },
+  { level: 'high', id: 'npmrc',                  regex: /(?:^|\/)\.npmrc$/i,                              reason: '.npmrc may contain auth tokens' },
+  { level: 'high', id: 'pypirc',                 regex: /(?:^|\/)\.pypirc$/i,                             reason: '.pypirc contains PyPI credentials' },
+  { level: 'high', id: 'gem-creds',              regex: /(?:^|\/)\.gem\/credentials$/i,                   reason: 'RubyGems credentials' },
+  { level: 'high', id: 'vault-token',            regex: /(?:^|\/)(\.vault-token|vault-token)$/i,          reason: 'Vault token file' },
+  { level: 'high', id: 'keystore',               regex: /\.(keystore|jks)$/i,                             reason: 'Java keystore' },
+  { level: 'high', id: 'htpasswd',               regex: /(?:^|\/)\.?htpasswd$/i,                          reason: 'htpasswd contains hashed passwords' },
+  { level: 'high', id: 'pgpass',                 regex: /(?:^|\/)\.pgpass$/i,                             reason: 'PostgreSQL password file' },
+  { level: 'high', id: 'my-cnf',                 regex: /(?:^|\/)\.my\.cnf$/i,                            reason: 'MySQL config may contain password' },
 
   // STRICT
-  { level: 'strict', id: 'database-config',      regex: /(?:^|\/)(?:config\/)?database\.(json|ya?ml)$/i, reason: 'Database config may contain passwords' },
-  { level: 'strict', id: 'ssh-known-hosts',      regex: /(?:^|\/)\.ssh\/known_hosts$/,                   reason: 'SSH known_hosts reveals infrastructure' },
-  { level: 'strict', id: 'gitconfig',            regex: /(?:^|\/)\.gitconfig$/,                          reason: '.gitconfig may contain credentials' },
-  { level: 'strict', id: 'curlrc',               regex: /(?:^|\/)\.curlrc$/,                             reason: '.curlrc may contain auth' },
+  { level: 'strict', id: 'database-config',      regex: /(?:^|\/)(?:config\/)?database\.(json|ya?ml)$/i,  reason: 'Database config may contain passwords' },
+  { level: 'strict', id: 'ssh-known-hosts',      regex: /(?:^|\/)\.ssh\/known_hosts$/i,                   reason: 'SSH known_hosts reveals infrastructure' },
+  { level: 'strict', id: 'gitconfig',            regex: /(?:^|\/)\.gitconfig$/i,                          reason: '.gitconfig may contain credentials' },
+  { level: 'strict', id: 'curlrc',               regex: /(?:^|\/)\.curlrc$/i,                             reason: '.curlrc may contain auth' },
 ];
 
 // Bash patterns that expose or exfiltrate secrets
@@ -94,14 +96,29 @@ const BASH_PATTERNS = [
   { level: 'high', id: 'rsync-secrets',          regex: /\brsync\b[^;|&]*(\.env|credentials|secrets|id_rsa)[^;|&]+:/i,    reason: 'Syncing secrets via rsync' },
   { level: 'high', id: 'nc-secrets',             regex: /\bnc\b[^;|&]*<[^;|&]*(\.env|credentials|secrets|id_rsa)/i,       reason: 'Exfiltrating secrets via netcat' },
 
+  // HIGH - Write/overwrite secrets via tee or shell redirection
+  // `tee` writes stdin to a file, bypassing the Write tool check entirely.
+  // Shell redirections like `echo x > .env` or `cat > .env << EOF` are caught
+  // here since the Bash hook sees the raw command string.
+  { level: 'high', id: 'tee-env',                regex: /\btee\b[^;|&]*\.env\b/i,                                          reason: 'Writing to .env via tee' },
+  { level: 'high', id: 'tee-ssh-key',            regex: /\btee\b[^;|&]*(id_rsa|id_ed25519|id_ecdsa|\.pem|\.key)\b/i,       reason: 'Writing to key file via tee' },
+  { level: 'high', id: 'redirect-env',           regex: /(?<![<])>\s*\.env\b/i,                                             reason: 'Shell redirection overwrites .env' },
+
+  // HIGH - Encode/dump secrets (reads file content even without cat)
+  // These tools read files and emit their content in another form, which is
+  // functionally equivalent to `cat` for exfiltration purposes.
+  { level: 'high', id: 'encode-env',             regex: /\b(base64|xxd|od|hexdump|strings)\b[^|;]*\.env\b/i,               reason: 'Encoding/dumping .env exposes secrets' },
+  { level: 'high', id: 'encode-ssh-key',         regex: /\b(base64|xxd|od|hexdump)\b[^|;]*(id_rsa|id_ed25519|id_ecdsa|\.pem|\.key)\b/i, reason: 'Encoding/dumping private key' },
+  { level: 'high', id: 'encode-aws-creds',       regex: /\b(base64|xxd|od|hexdump)\b[^|;]*\.aws\/credentials/i,            reason: 'Encoding/dumping AWS credentials' },
+
   // HIGH - Copy/move/delete secrets
   { level: 'high', id: 'cp-env',                 regex: /\bcp\b[^;|&]*\.env\b/i,                                           reason: 'Copying .env file' },
   { level: 'high', id: 'cp-ssh-key',             regex: /\bcp\b[^;|&]*(id_rsa|id_ed25519|\.pem|\.key)\b/i,                 reason: 'Copying private key' },
   { level: 'high', id: 'mv-env',                 regex: /\bmv\b[^;|&]*\.env\b/i,                                           reason: 'Moving .env file' },
-  { level: 'high', id: 'rm-ssh-key',             regex: /\brm\b[^;|&]*(id_rsa|id_ed25519|id_ecdsa|authorized_keys)/i,     reason: 'Deleting SSH key' },
+  { level: 'high', id: 'rm-ssh-key',             regex: /\brm\b[^;|&]*(id_rsa|id_ed25519|id_ecdsa|authorized_keys)/i,      reason: 'Deleting SSH key' },
   { level: 'high', id: 'rm-env',                 regex: /\brm\b.*\.env\b/i,                                                 reason: 'Deleting .env file' },
   { level: 'high', id: 'rm-aws-creds',           regex: /\brm\b[^;|&]*\.aws\/credentials/i,                                reason: 'Deleting AWS credentials' },
-  { level: 'high', id: 'truncate-secrets',       regex: /\btruncate\b.*\.(env|pem|key)\b|(?:^|[;&|]\s*)>\s*\.env\b/i,      reason: 'Truncating secrets file' },
+  { level: 'high', id: 'truncate-secrets',       regex: /\btruncate\b.*\.(env|pem|key)\b/i,                                 reason: 'Truncating secrets file' },
 
   // HIGH - Process environ
   { level: 'high', id: 'proc-environ',           regex: /\/proc\/[^/]*\/environ/,                                          reason: 'Reading process environment' },
@@ -110,7 +127,6 @@ const BASH_PATTERNS = [
 
   // STRICT
   { level: 'strict', id: 'grep-password',        regex: /\bgrep\b[^|;]*(-r|--recursive)[^|;]*(password|secret|api.?key|token|credential)/i, reason: 'Grep for secrets may expose them' },
-  { level: 'strict', id: 'base64-secrets',       regex: /\bbase64\b[^|;]*(\.env|credentials|secrets|id_rsa|\.pem)/i,       reason: 'Base64 encoding secrets' },
 ];
 
 const LEVELS = { critical: 1, high: 2, strict: 3 };

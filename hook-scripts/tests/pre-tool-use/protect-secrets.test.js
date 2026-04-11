@@ -98,6 +98,12 @@ describe('Unit: checkFilePath()', () => {
     it('blocks .env.development', () => fileBlocked('.env.development', 'env-file'));
     it('blocks /path/to/.env.staging', () => fileBlocked('/path/to/.env.staging', 'env-file'));
     it('blocks .envrc', () => fileBlocked('.envrc', 'envrc'));
+    // Case-insensitive: macOS HFS+ and Windows NTFS are case-insensitive by default,
+    // so .ENV and .Env resolve to the same file as .env.
+    it('blocks .ENV (uppercase)', () => fileBlocked('.ENV', 'env-file'));
+    it('blocks .Env (mixed case)', () => fileBlocked('.Env', 'env-file'));
+    it('blocks /app/.ENV.LOCAL', () => fileBlocked('/app/.ENV.LOCAL', 'env-file'));
+    it('blocks .ENVRC', () => fileBlocked('.ENVRC', 'envrc'));
   });
 
   describe('ALLOWLIST: .env examples', () => {
@@ -260,7 +266,35 @@ describe('Unit: checkBashCommand()', () => {
     it('blocks rm .env', () => bashBlocked('rm .env', 'rm-env'));
     it('blocks rm ~/.aws/credentials', () => bashBlocked('rm ~/.aws/credentials', 'rm-aws-creds'));
     it('blocks truncate .env', () => bashBlocked('truncate -s 0 .env', 'truncate-secrets'));
-    it('blocks > .env', () => bashBlocked('> .env', 'truncate-secrets'));
+  });
+
+  describe('HIGH: Write/overwrite via tee or shell redirection', () => {
+    it('blocks tee .env', () => bashBlocked('echo "SECRET=x" | tee .env', 'tee-env'));
+    it('blocks tee -a .env', () => bashBlocked('echo "SECRET=x" | tee -a .env', 'tee-env'));
+    it('blocks tee /app/.env', () => bashBlocked('cat template | tee /app/.env', 'tee-env'));
+    it('blocks tee id_rsa', () => bashBlocked('cat key | tee ~/.ssh/id_rsa', 'tee-ssh-key'));
+    it('blocks tee server.pem', () => bashBlocked('openssl req | tee server.pem', 'tee-ssh-key'));
+    // redirect-env: `echo x > .env` is caught here; `cat > .env` would also be
+    // caught but cat-env (critical) fires first since cat is in that list.
+    it('blocks echo > .env', () => bashBlocked('echo "x" > .env', 'redirect-env'));
+    it('blocks bare redirect > .env', () => bashBlocked('> .env', 'redirect-env'));
+    it('blocks printf > .env', () => bashBlocked('printf "" > .env', 'redirect-env'));
+    it('allows tee to a log file', () => bashAllowed('make build 2>&1 | tee build.log'));
+    it('allows > to a non-secret file', () => bashAllowed('echo hello > output.txt'));
+  });
+
+  describe('HIGH: Encode/dump secrets', () => {
+    it('blocks base64 .env', () => bashBlocked('base64 .env', 'encode-env'));
+    it('blocks base64 /app/.env.production', () => bashBlocked('base64 /app/.env.production', 'encode-env'));
+    it('blocks xxd .env', () => bashBlocked('xxd .env', 'encode-env'));
+    it('blocks od .env', () => bashBlocked('od -c .env', 'encode-env'));
+    it('blocks hexdump .env', () => bashBlocked('hexdump -C .env', 'encode-env'));
+    it('blocks strings .env', () => bashBlocked('strings .env', 'encode-env'));
+    it('blocks base64 id_rsa', () => bashBlocked('base64 ~/.ssh/id_rsa', 'encode-ssh-key'));
+    it('blocks xxd server.pem', () => bashBlocked('xxd server.pem', 'encode-ssh-key'));
+    it('blocks base64 ~/.aws/credentials', () => bashBlocked('base64 ~/.aws/credentials', 'encode-aws-creds'));
+    it('allows base64 on non-secret file', () => bashAllowed('base64 image.png'));
+    it('allows xxd on non-secret file', () => bashAllowed('xxd binary.dat'));
   });
 
   describe('HIGH: Indirect access', () => {
@@ -273,8 +307,6 @@ describe('Unit: checkBashCommand()', () => {
     it('blocks grep -r password at strict', () => bashBlocked('grep -r password .', 'grep-password', 'strict'));
     it('blocks grep --recursive secret at strict', () => bashBlocked('grep --recursive secret /app', 'grep-password', 'strict'));
     it('allows grep -r password at high', () => bashAllowed('grep -r password .', 'high'));
-    it('blocks base64 .env at strict', () => bashBlocked('base64 .env', 'base64-secrets', 'strict'));
-    it('allows base64 .env at high', () => bashAllowed('base64 .env', 'high'));
   });
 
   describe('Safe commands', () => {

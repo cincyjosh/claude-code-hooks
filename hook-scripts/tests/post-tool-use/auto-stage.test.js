@@ -13,7 +13,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
-const { isInGitRepo, stageFile } = require('../../post-tool-use/auto-stage.js');
+const { isInGitRepo, stageFile, isSensitiveFile } = require('../../post-tool-use/auto-stage.js');
 
 const SCRIPT_PATH = path.join(__dirname, '../../post-tool-use/auto-stage.js');
 
@@ -53,6 +53,24 @@ let tempDir, testFile;
 // ─────────────────────────────────────────────────────────────────────────────
 // Unit Tests - isInGitRepo
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit Tests - isSensitiveFile
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Unit: isSensitiveFile()', () => {
+  it('blocks .env', () => assert.strictEqual(isSensitiveFile('/app/.env'), true));
+  it('blocks .env.local', () => assert.strictEqual(isSensitiveFile('/app/.env.local'), true));
+  it('blocks .ENV (uppercase, macOS)', () => assert.strictEqual(isSensitiveFile('/app/.ENV'), true));
+  it('blocks ~/.aws/credentials', () => assert.strictEqual(isSensitiveFile('/home/user/.aws/credentials'), true));
+  it('blocks ~/.ssh/id_rsa', () => assert.strictEqual(isSensitiveFile('/home/user/.ssh/id_rsa'), true));
+  it('blocks server.pem', () => assert.strictEqual(isSensitiveFile('/ssl/server.pem'), true));
+  it('blocks private.key', () => assert.strictEqual(isSensitiveFile('/ssl/private.key'), true));
+  it('allows .env.example', () => assert.strictEqual(isSensitiveFile('/app/.env.example'), false));
+  it('allows .env.sample', () => assert.strictEqual(isSensitiveFile('/app/.env.sample'), false));
+  it('allows package.json', () => assert.strictEqual(isSensitiveFile('/app/package.json'), false));
+  it('allows src/index.js', () => assert.strictEqual(isSensitiveFile('/app/src/index.js'), false));
+});
 
 describe('Unit: isInGitRepo()', () => {
   it('returns true for file in git repo', () => {
@@ -143,6 +161,55 @@ describe('Integration: gitignore behavior', () => {
     // git add returns error for ignored files (exit code 1)
     assert.strictEqual(result.success, false);
     assert.ok(result.error.includes('ignored'));
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Integration Tests - sensitive file guard
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Integration: sensitive file guard', () => {
+  let gitDir;
+
+  before(() => {
+    gitDir = fs.mkdtempSync(path.join(os.tmpdir(), 'auto-stage-sensitive-'));
+    execSync('git init && git config user.email "test@test.com" && git config user.name "Test"', { cwd: gitDir, stdio: 'pipe' });
+  });
+
+  after(() => {
+    if (gitDir) fs.rmSync(gitDir, { recursive: true, force: true });
+  });
+
+  it('does not stage .env even without .gitignore', async () => {
+    const envFile = path.join(gitDir, '.env');
+    fs.writeFileSync(envFile, 'SECRET=abc123');
+    await runHook('Write', { file_path: envFile }, gitDir);
+    const staged = execSync('git diff --cached --name-only', { cwd: gitDir, encoding: 'utf8' });
+    assert.ok(!staged.includes('.env'), '.env should not be staged');
+  });
+
+  it('does not stage .ENV (uppercase)', async () => {
+    const envFile = path.join(gitDir, '.ENV');
+    fs.writeFileSync(envFile, 'SECRET=abc123');
+    await runHook('Write', { file_path: envFile }, gitDir);
+    const staged = execSync('git diff --cached --name-only', { cwd: gitDir, encoding: 'utf8' });
+    assert.ok(!staged.toLowerCase().includes('.env'), '.ENV should not be staged');
+  });
+
+  it('does not stage .env.local', async () => {
+    const envFile = path.join(gitDir, '.env.local');
+    fs.writeFileSync(envFile, 'SECRET=abc123');
+    await runHook('Write', { file_path: envFile }, gitDir);
+    const staged = execSync('git diff --cached --name-only', { cwd: gitDir, encoding: 'utf8' });
+    assert.ok(!staged.includes('.env.local'), '.env.local should not be staged');
+  });
+
+  it('still stages normal files', async () => {
+    const jsFile = path.join(gitDir, 'index.js');
+    fs.writeFileSync(jsFile, 'console.log("hello")');
+    await runHook('Write', { file_path: jsFile }, gitDir);
+    const staged = execSync('git diff --cached --name-only', { cwd: gitDir, encoding: 'utf8' });
+    assert.ok(staged.includes('index.js'), 'index.js should be staged');
   });
 });
 

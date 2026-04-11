@@ -113,11 +113,17 @@ describe('Unit: checkCommand()', () => {
   });
 
   describe('HIGH: git dangerous operations', () => {
-    it('blocks git push --force main', () => shouldBlock('git push --force origin main', 'git-force-main'));
+    it('blocks git push --force origin main', () => shouldBlock('git push --force origin main', 'git-force-main'));
+    it('blocks git push origin main --force', () => shouldBlock('git push origin main --force', 'git-force-main'));
+    it('blocks git push origin main -f', () => shouldBlock('git push origin main -f', 'git-force-main'));
+    it('blocks git push -f origin main', () => shouldBlock('git push -f origin main', 'git-force-main'));
+    it('blocks git push --force origin master', () => shouldBlock('git push --force origin master', 'git-force-main'));
     it('blocks git reset --hard', () => shouldBlock('git reset --hard HEAD~1', 'git-reset-hard'));
     it('blocks git clean -f', () => shouldBlock('git clean -f', 'git-clean-f'));
-    it('allows git push --force-with-lease', () => shouldAllow('git push --force-with-lease origin feature'));
-    it('allows git push', () => shouldAllow('git push origin main'));
+    it('allows git push --force-with-lease origin main', () => shouldAllow('git push --force-with-lease origin main'));
+    it('allows git push --force-with-lease origin feature', () => shouldAllow('git push --force-with-lease origin feature'));
+    it('allows git push origin main', () => shouldAllow('git push origin main'));
+    it('allows git push --force origin feature', () => shouldAllow('git push --force origin feature'));
   });
 
   describe('HIGH: secrets exposure', () => {

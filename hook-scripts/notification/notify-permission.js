@@ -45,6 +45,34 @@ function getProjectName(cwd) {
   return cwd ? path.basename(cwd) : 'unknown';
 }
 
+// Redact secret-like patterns from notification messages before they are sent
+// to external channels. Notification messages can include content from blocked
+// commands (e.g. a permission prompt for `echo $SECRET_KEY`), so we replace
+// anything that looks like a secret value with [REDACTED].
+const SECRET_PATTERNS = [
+  // KEY=value or SECRET=value assignment forms
+  /\b([A-Z_]*(?:SECRET|KEY|TOKEN|PASSWORD|CREDENTIAL|AUTH|PRIVATE)[A-Z_]*)=\S+/gi,
+  // Bearer / Basic auth headers
+  /\b(Bearer|Basic)\s+[A-Za-z0-9+/=._-]{8,}/gi,
+  // AWS-style access keys (AKIA...)
+  /\b(AKIA|ASIA|AROA)[A-Z0-9]{16}\b/g,
+  // Long high-entropy strings that look like tokens (hex/base64, 20+ chars)
+  /\b[A-Za-z0-9+/]{20,}={0,2}\b/g,
+];
+
+function redactSecrets(message) {
+  if (!message) return message;
+  let out = message;
+  for (const pattern of SECRET_PATTERNS) {
+    out = out.replace(pattern, (match, ...groups) => {
+      // For KEY=value patterns keep the key name, redact only the value
+      const key = groups[0];
+      return key && match.includes('=') ? `${key}=[REDACTED]` : '[REDACTED]';
+    });
+  }
+  return out;
+}
+
 function getShortSessionId(sessionId) {
   return sessionId ? sessionId.slice(0, 6) : '????';
 }
@@ -93,12 +121,12 @@ async function sendSlack(data, type) {
       },
       {
         type: 'section',
-        text: { type: 'mrkdwn', text: `*Details:*\n${formatMessage(data.message)}` },
+        text: { type: 'mrkdwn', text: `*Details:*\n${formatMessage(redactSecrets(data.message))}` },
       },
       {
         type: 'context',
         elements: [
-          { type: 'mrkdwn', text: `📁 \`${data.cwd || 'unknown'}\`` },
+          { type: 'mrkdwn', text: `📁 \`${getProjectName(data.cwd)}\`` },
           { type: 'mrkdwn', text: `🕐 ${new Date().toLocaleTimeString()}` },
         ],
       },
@@ -156,6 +184,7 @@ if (require.main === module) {
     getEmoji,
     getTitle,
     formatMessage,
+    redactSecrets,
     sendSlack,
     sendAll,
   };

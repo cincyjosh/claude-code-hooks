@@ -26,6 +26,33 @@ const fs = require('fs');
 const path = require('path');
 const { execSync, spawnSync } = require('child_process');
 
+// Critical file patterns that must never be staged regardless of .gitignore.
+// Mirrors the CRITICAL-level entries from protect-secrets.js so that even if
+// that hook is misconfigured, auto-stage won't silently commit secrets.
+const SENSITIVE_PATTERNS = [
+  /(?:^|\/)\.env(?:\.[^/]*)?$/i,
+  /(?:^|\/)\.envrc$/i,
+  /(?:^|\/)\.ssh\/id_[^/]+$/i,
+  /(?:^|\/)(id_rsa|id_ed25519|id_ecdsa|id_dsa)$/i,
+  /(?:^|\/)\.ssh\/authorized_keys$/i,
+  /(?:^|\/)\.aws\/credentials$/i,
+  /(?:^|\/)\.aws\/config$/i,
+  /(?:^|\/)\.kube\/config$/i,
+  /\.pem$/i,
+  /\.key$/i,
+  /\.(p12|pfx)$/i,
+];
+
+const SENSITIVE_ALLOWLIST = [
+  /\.env\.example$/i, /\.env\.sample$/i, /\.env\.template$/i,
+  /\.env\.schema$/i, /\.env\.defaults$/i, /env\.example$/i, /example\.env$/i,
+];
+
+function isSensitiveFile(filePath) {
+  if (SENSITIVE_ALLOWLIST.some(p => p.test(filePath))) return false;
+  return SENSITIVE_PATTERNS.some(p => p.test(filePath));
+}
+
 const LOG_DIR = path.join(process.env.HOME, '.claude', 'hooks-logs');
 
 function log(data) {
@@ -81,6 +108,11 @@ async function main() {
     // Resolve to absolute path if relative
     const absPath = path.isAbsolute(filePath) ? filePath : path.join(cwd || process.cwd(), filePath);
 
+    if (isSensitiveFile(absPath)) {
+      log({ level: 'SKIP', reason: 'sensitive file', file: absPath, session_id });
+      return console.log('{}');
+    }
+
     if (!isInGitRepo(absPath)) {
       log({ level: 'SKIP', reason: 'not in git repo', file: absPath, session_id });
       return console.log('{}');
@@ -103,5 +135,5 @@ async function main() {
 if (require.main === module) {
   main();
 } else {
-  module.exports = { isInGitRepo, stageFile, log };
+  module.exports = { isInGitRepo, stageFile, isSensitiveFile, log };
 }

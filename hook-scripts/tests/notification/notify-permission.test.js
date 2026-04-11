@@ -19,6 +19,7 @@ const {
   getEmoji,
   getTitle,
   formatMessage,
+  redactSecrets,
   sendSlack,
 } = require('../../notification/notify-permission.js');
 
@@ -187,6 +188,44 @@ describe('Unit: formatMessage()', () => {
   it('handles null/undefined', () => {
     assert.strictEqual(formatMessage(null), '_No details provided_');
     assert.strictEqual(formatMessage(undefined), '_No details provided_');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unit Tests - redactSecrets
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Unit: redactSecrets()', () => {
+  it('redacts KEY=value assignments', () => {
+    const result = redactSecrets('Claude wants to run: SECRET_KEY=abc123def456');
+    assert.ok(result.includes('SECRET_KEY=[REDACTED]'), result);
+    assert.ok(!result.includes('abc123def456'), result);
+  });
+
+  it('redacts PASSWORD= assignments', () => {
+    const result = redactSecrets('DB_PASSWORD=hunter2 was in the command');
+    assert.ok(result.includes('[REDACTED]'), result);
+    assert.ok(!result.includes('hunter2'), result);
+  });
+
+  it('redacts Bearer tokens', () => {
+    const result = redactSecrets('Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload');
+    assert.ok(result.includes('[REDACTED]'), result);
+    assert.ok(!result.includes('eyJhbGciOiJIUzI1NiJ9'), result);
+  });
+
+  it('redacts AWS access key IDs', () => {
+    const result = redactSecrets('Using key AKIAIOSFODNN7EXAMPLE in command');
+    assert.ok(result.includes('[REDACTED]'), result);
+    assert.ok(!result.includes('AKIAIOSFODNN7EXAMPLE'), result);
+  });
+
+  it('passes through normal messages unchanged', () => {
+    assert.strictEqual(redactSecrets('Claude needs permission to run Bash'), 'Claude needs permission to run Bash');
+  });
+
+  it('handles null/undefined', () => {
+    assert.strictEqual(redactSecrets(null), null);
+    assert.strictEqual(redactSecrets(undefined), undefined);
   });
 });
 

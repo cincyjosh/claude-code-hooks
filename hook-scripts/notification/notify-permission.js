@@ -14,6 +14,14 @@
  * }
  *
  * Environment: CCH_SLA_WEBHOOK (Slack webhook URL)
+ *
+ * Privacy note: This hook is explicitly designed to send data off-machine.
+ * The Slack payload contains: project name (basename only, not full path),
+ * a 6-character session fragment, notification type, and a redacted message.
+ * Secret-like values in the message are masked by redactSecrets() before
+ * being sent to Slack or written to local logs. Do not set CCH_SLA_WEBHOOK
+ * if you are working in a sensitive environment and cannot accept any
+ * outbound notification traffic.
  */
 
 const fs = require('fs');
@@ -157,7 +165,7 @@ async function main() {
     const data = JSON.parse(input);
     if (data.hook_event_name !== 'Notification') return console.log('{}');
 
-    log({ level: 'INPUT', notification_type: data.notification_type, message: data.message, session_id: data.session_id });
+    log({ level: 'INPUT', notification_type: data.notification_type, message: redactSecrets(data.message), session_id: data.session_id });
 
     const type = getNotificationType(data);
     const results = await sendAll(data, type);

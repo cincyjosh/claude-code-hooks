@@ -9,7 +9,7 @@
  *   - Easy to review changes before committing
  *   - No manual staging needed
  *
- * Note: Relies on .gitignore to exclude sensitive files (.env, keys, etc.)
+ * Note: Sensitive files are skipped regardless of .gitignore state. See SENSITIVE_PATTERNS.
  *
  * Setup in .claude/settings.json:
  * {
@@ -26,10 +26,11 @@ const fs = require('fs');
 const path = require('path');
 const { execSync, spawnSync } = require('child_process');
 
-// Critical file patterns that must never be staged regardless of .gitignore.
-// Mirrors the CRITICAL-level entries from protect-secrets.js so that even if
+// Files that must never be staged regardless of .gitignore state.
+// Mirrors the CRITICAL + HIGH entries from protect-secrets.js so that even if
 // that hook is misconfigured, auto-stage won't silently commit secrets.
 const SENSITIVE_PATTERNS = [
+  // CRITICAL — environment and key files
   /(?:^|\/)\.env(?:\.[^/]*)?$/i,
   /(?:^|\/)\.envrc$/i,
   /(?:^|\/)\.ssh\/id_[^/]+$/i,
@@ -41,6 +42,23 @@ const SENSITIVE_PATTERNS = [
   /\.pem$/i,
   /\.key$/i,
   /\.(p12|pfx)$/i,
+
+  // HIGH — credentials and auth files
+  /(?:^|\/)credentials\.json$/i,
+  /(?:^|\/)(secrets?|credentials?)\.(json|ya?ml|toml)$/i,
+  /service[_-]?account.*\.json$/i,
+  /(?:^|\/)\.config\/gcloud\/.*(credentials|tokens)/i,
+  /(?:^|\/)\.azure\/(credentials|accessTokens)/i,
+  /(?:^|\/)\.docker\/config\.json$/i,
+  /(?:^|\/)\.netrc$/i,
+  /(?:^|\/)\.npmrc$/i,
+  /(?:^|\/)\.pypirc$/i,
+  /(?:^|\/)\.gem\/credentials$/i,
+  /(?:^|\/)(\.vault-token|vault-token)$/i,
+  /\.(keystore|jks)$/i,
+  /(?:^|\/)\.?htpasswd$/i,
+  /(?:^|\/)\.pgpass$/i,
+  /(?:^|\/)\.my\.cnf$/i,
 ];
 
 const SENSITIVE_ALLOWLIST = [

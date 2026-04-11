@@ -59,6 +59,7 @@ let tempDir, testFile;
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Unit: isSensitiveFile()', () => {
+  // CRITICAL
   it('blocks .env', () => assert.strictEqual(isSensitiveFile('/app/.env'), true));
   it('blocks .env.local', () => assert.strictEqual(isSensitiveFile('/app/.env.local'), true));
   it('blocks .ENV (uppercase, macOS)', () => assert.strictEqual(isSensitiveFile('/app/.ENV'), true));
@@ -66,6 +67,17 @@ describe('Unit: isSensitiveFile()', () => {
   it('blocks ~/.ssh/id_rsa', () => assert.strictEqual(isSensitiveFile('/home/user/.ssh/id_rsa'), true));
   it('blocks server.pem', () => assert.strictEqual(isSensitiveFile('/ssl/server.pem'), true));
   it('blocks private.key', () => assert.strictEqual(isSensitiveFile('/ssl/private.key'), true));
+  // HIGH
+  it('blocks credentials.json', () => assert.strictEqual(isSensitiveFile('/app/credentials.json'), true));
+  it('blocks secrets.yaml', () => assert.strictEqual(isSensitiveFile('/app/secrets.yaml'), true));
+  it('blocks service-account.json', () => assert.strictEqual(isSensitiveFile('/app/service-account.json'), true));
+  it('blocks ~/.docker/config.json', () => assert.strictEqual(isSensitiveFile('/home/user/.docker/config.json'), true));
+  it('blocks ~/.netrc', () => assert.strictEqual(isSensitiveFile('/home/user/.netrc'), true));
+  it('blocks ~/.npmrc', () => assert.strictEqual(isSensitiveFile('/home/user/.npmrc'), true));
+  it('blocks ~/.pypirc', () => assert.strictEqual(isSensitiveFile('/home/user/.pypirc'), true));
+  it('blocks ~/.pgpass', () => assert.strictEqual(isSensitiveFile('/home/user/.pgpass'), true));
+  it('blocks debug.keystore', () => assert.strictEqual(isSensitiveFile('/app/debug.keystore'), true));
+  // allowlist
   it('allows .env.example', () => assert.strictEqual(isSensitiveFile('/app/.env.example'), false));
   it('allows .env.sample', () => assert.strictEqual(isSensitiveFile('/app/.env.sample'), false));
   it('allows package.json', () => assert.strictEqual(isSensitiveFile('/app/package.json'), false));

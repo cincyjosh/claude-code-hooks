@@ -4,6 +4,7 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/
+CLAUDE.md
 
 # Logs
 logs
